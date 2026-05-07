@@ -5,7 +5,7 @@ from io import StringIO
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 
-# --- 1. Define Functions ---
+
 
 def get_result(row):
     if row["home_score"] > row["away_score"]:
@@ -35,7 +35,7 @@ def get_form(team, date, df):
                 points += 1  
     return points
 
-# --- 2. Define Cached Data & Model Loaders ---
+
 
 @st.cache_data
 def load_data():
@@ -97,7 +97,7 @@ def train_model(features_df):
     clf.fit(X_train, y_train)
     return clf
 
-# --- 3. Run Pipeline ---
+
 
 with st.spinner("Loading data and training model... (This will take a minute on the first run)"):
     df = load_data()
@@ -105,7 +105,7 @@ with st.spinner("Loading data and training model... (This will take a minute on 
     features_df = build_features(df, elo)
     clf = train_model(features_df)
 
-# --- 4. Build UI ---
+
 
 st.title("International Football Match Predictor ⚽")
 
@@ -123,16 +123,16 @@ if st.button("Predict"):
     if home_team == away_team:
         st.warning("Please select two different teams!")
     else:
-        # 1. Get Elo
+        
         home_elo = elo.get(home_team, 1500)
         away_elo = elo.get(away_team, 1500)
         
-        # 2. Get Form (Using today's date for a future match)
+        
         today = pd.Timestamp.today()
         home_form = get_form(home_team, today, df)
         away_form = get_form(away_team, today, df)
         
-        # 3. Build single-row DataFrame exactly as the model expects
+        
         match_features = pd.DataFrame([{
             "elo_diff"  : home_elo - away_elo,
             "is_neutral": int(is_neutral),
@@ -141,16 +141,16 @@ if st.button("Predict"):
             "form_diff" : home_form - away_form
         }])
         
-        # 4. Predict
-        probs = clf.predict_proba(match_features)[0]
-        classes = clf.classes_  # e.g., ['draw', 'loss', 'win']
         
-        # 5. Display the results clearly
+        probs = clf.predict_proba(match_features)[0]
+        classes = clf.classes_  
+        
+        
         st.subheader(f"Results: {home_team} vs {away_team}")
         
-        # Create a nice layout to show the probabilities
+        
         for cls, prob in zip(classes, probs):
-            # Format the text so 'loss' means 'away win', 'win' means 'home win', etc.
+            
             if cls == "win":
                 label = f"{home_team} Win"
             elif cls == "loss":
