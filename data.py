@@ -22,30 +22,60 @@ def get_result(row):
 
 df["result"] = df.apply(get_result, axis = 1)
 
-def compute_elo(df, k=32, base=1500):
+def compute_elo(_df, base=1500):
+
+    def get_k(tournament):
+        t = tournament.lower()
+
+        # World Cup
+        if t == "fifa world cup":
+            return 60
+
+        # Major continental tournaments
+        if t in [
+            "uefa euro",
+            "copa américa",
+            "african cup of nations",
+            "afc asian cup",
+            "uefa nations league",
+            "concacaf nations league",
+            "confederations cup",
+            "oceania nations cup",
+        ]:
+            return 50
+        if t == "gold cup":
+            return 35
+        # Secondary tournaments
+        if t in [
+            "aff championship",
+            "gulf cup",
+            "saff cup",
+            "waff championship",
+            "cosafa cup",
+            "cecafa cup",
+            "eaff championship",
+            "cafa nations cup",
+            "nordic championship",
+        ]:
+            return 20
+
+        return None  
+
     elo = {}
+    for _, row in _df.sort_values("date").iterrows():
+        k = get_k(row["tournament"])
+        if k is None:
+            continue     # ← just skip this match entirely
 
-    for _, row in df.sort_values("date").iterrows():
-        home = row["home_team"]
-        away = row["away_team"]
+        home, away = row["home_team"], row["away_team"]
+        h_elo = elo.get(home, base)
+        a_elo = elo.get(away, base)
 
-        
-        home_elo = elo.get(home, base)
-        away_elo = elo.get(away, base)
+        expected = 1 / (1 + 10 ** ((a_elo - h_elo) / 400))
+        actual   = {"win": 1, "draw": 0.5, "loss": 0}[row["result"]]
 
-        
-        expected = 1 / (1 + 10 ** ((away_elo- home_elo) / 400))
-
-        
-        if row["result"] == "win":
-            actual = 1
-        elif row["result"] == "draw":
-            actual = 0.5
-        else:
-            actual = 0
-
-        elo[home] = home_elo + k * (actual - expected)
-        elo[away] = away_elo + k * ((1 - actual) - (1 - expected))
+        elo[home] = h_elo + k * (actual - expected)
+        elo[away] = a_elo + k * ((1 - actual) - (1 - expected))
 
     return elo
 
@@ -85,9 +115,9 @@ def get_form(team, date, df):
     return points
 
 elo = compute_elo(df)
-# top10 = sorted(elo.items(), key=lambda x: x[1], reverse=True)[:10]
-# for team, rating in top10:
-#     print(f"{team}: {rating:.0f}")
+top10 = sorted(elo.items(), key=lambda x: x[1], reverse=True)[:10]
+for team, rating in top10:
+    print(f"{team}: {rating:.0f}")
 records = []
 
 for _, row in df.iterrows():
@@ -128,3 +158,4 @@ importances = clf.feature_importances_
 
 for name, score in sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True):
     print(f"{name}: {score:.3f}")
+# print(sorted(df["tournament"].unique()))
